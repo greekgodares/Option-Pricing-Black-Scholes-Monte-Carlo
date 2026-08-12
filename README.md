@@ -17,8 +17,6 @@ The project connects concepts from:
 - Implied volatility
 - Volatility smile
 
-The complete mathematical development is provided in the accompanying PDF report.
-
 ---
 
 # 1. Project Overview
@@ -307,3 +305,313 @@ Volatility
     |
     +----------------------> Strike Price
                 ATM
+```
+
+The volatility smile demonstrates an important limitation of the constant-volatility assumption in the standard Black-Scholes model.
+
+---
+
+# 12. Limitations of the Black-Scholes Model
+
+The standard Black-Scholes model assumes:
+- Constant volatility.
+- Constant risk-free interest rate.
+- Geometric Brownian Motion for the underlying asset.
+- Frictionless markets.
+- No transaction costs.
+- Continuous trading.
+- Continuous asset-price paths.
+- European-style exercise.
+
+Real financial markets do not perfectly satisfy these assumptions. In particular, the observed variation in implied volatility across strike prices suggests that a constant-volatility model does not fully capture market option prices. This motivates more flexible models and numerical methods.
+
+---
+
+# 13. Feynman-Kac Representation
+
+The Feynman-Kac theorem provides a connection between certain partial differential equations and expectations of stochastic processes.
+
+Under the risk-neutral measure $\mathbb{Q}$, the stock price follows:
+
+$$dS_t = r S_t \, dt + \sigma S_t \, dW_t^{\mathbb{Q}}$$
+
+For a European call option, the price can be written as:
+
+$$C(S,t) = e^{-r(T-t)} \mathbb{E}^{\mathbb{Q}} \left[ \max(S_T - K, 0) \;\middle|\; S_t = S \right]$$
+
+Therefore, the option price is the **discounted expected payoff under the risk-neutral measure**. Monte Carlo simulation approximates this expectation numerically.
+
+---
+
+# 14. Monte Carlo Simulation
+
+## 14.1 Risk-Neutral Stock Dynamics
+
+Under the risk-neutral measure:
+
+$$dS_t = r S_t \, dt + \sigma S_t \, dW_t^{\mathbb{Q}}$$
+
+For a time step $\Delta t$, the exact discretization of Geometric Brownian Motion is:
+
+$$S_{t+\Delta t} = S_t \exp\left[ \left( r - \frac{\sigma^2}{2} \right) \Delta t + \sigma \sqrt{\Delta t} \, Z \right]$$
+
+where $Z \sim N(0,1)$.
+
+---
+
+## 14.2 Simulation Procedure
+
+### Step 1 — Initialize the Parameters
+For the numerical example:
+- $S_0 = 100$
+- $K = 100$
+- $T = 1$
+- $r = 0.05$
+- $\sigma = 0.20$
+
+---
+
+### Step 2 — Divide the Time Interval
+If one year is divided into $252$ trading days:
+
+$$\Delta t = \frac{1}{252}$$
+
+---
+
+### Step 3 — Generate Random Variables
+At every time step, generate a standard normal random variable $Z \sim N(0,1)$ and update the stock price using:
+
+$$S_{t+\Delta t} = S_t \exp\left[ \left( r - \frac{\sigma^2}{2} \right) \Delta t + \sigma \sqrt{\Delta t} \, Z \right]$$
+
+Continue until maturity.
+
+---
+
+### Step 4 — Calculate the Payoff
+For simulation $i$, the European call payoff is:
+
+$$P_i = \max\left(S_T^{(i)} - K, 0\right)$$
+
+---
+
+### Step 5 — Repeat the Simulation
+Repeat the simulation for a large number of independent paths (e.g., $N = 100{,}000$). This produces terminal stock prices $S_T^{(1)}, S_T^{(2)}, \ldots, S_T^{(N)}$ and corresponding payoffs $P_1, P_2, \ldots, P_N$.
+
+---
+
+### Step 6 — Average the Payoffs
+The average simulated payoff is:
+
+$$\overline{P} = \frac{1}{N} \sum_{i=1}^{N} P_i = \frac{1}{N} \sum_{i=1}^{N} \max\left(S_T^{(i)} - K, 0\right)$$
+
+---
+
+### Step 7 — Discount to the Present
+The Monte Carlo estimate of the option price is:
+
+$$\widehat{C} = e^{-rT} \frac{1}{N} \sum_{i=1}^{N} \max\left(S_T^{(i)} - K, 0\right)$$
+
+As $N$ increases, the Monte Carlo estimator converges to the corresponding risk-neutral expected value under the assumed model.
+
+---
+
+## 14.3 Python Implementation for Monte Carlo vs. Black-Scholes
+
+Below is a complete Python script to verify the analytical solution against Monte Carlo simulation:
+
+```python
+import numpy as np
+from scipy.stats import norm
+
+# Option and Market Parameters
+S0 = 100.0    # Initial stock price
+K = 100.0     # Strike price
+T = 1.0       # Time to maturity (1 year)
+r = 0.05      # Risk-free interest rate (5%)
+sigma = 0.20  # Volatility (20%)
+
+# 1. Analytical Black-Scholes Pricing Formula
+def black_scholes_call(S, K, T, r, sigma):
+    d1 = (np.log(S / K) + (r + 0.5 * sigma**2) * T) / (sigma * np.sqrt(T))
+    d2 = d1 - sigma * np.sqrt(T)
+    call_price = S * norm.cdf(d1) - K * np.exp(-r * T) * norm.cdf(d2)
+    return call_price, d1, d2
+
+bs_price, d1, d2 = black_scholes_call(S0, K, T, r, sigma)
+
+# 2. Monte Carlo Simulation Engine
+def monte_carlo_call(S0, K, T, r, sigma, num_paths=100000, num_steps=252, seed=42):
+    np.random.seed(seed)
+    dt = T / num_steps
+    
+    # Generate standard normal random numbers: shape (num_paths, num_steps)
+    Z = np.random.standard_normal((num_paths, num_steps))
+    
+    # Calculate geometric Brownian motion stock paths
+    drift = (r - 0.5 * sigma**2) * dt
+    diffusion = sigma * np.sqrt(dt) * Z
+    
+    # Cumulative product across time steps to find path values
+    price_paths = S0 * np.exp(np.cumsum(drift + diffusion, axis=1))
+    
+    # Terminal stock prices S_T for all paths
+    ST = price_paths[:, -1]
+    
+    # Call payoffs max(S_T - K, 0)
+    payoffs = np.maximum(ST - K, 0)
+    
+    # Discounted mean payoff
+    mc_price = np.exp(-r * T) * np.mean(payoffs)
+    
+    # Standard Error Calculation
+    std_err = np.exp(-r * T) * np.std(payoffs) / np.sqrt(num_paths)
+    
+    return mc_price, std_err
+
+mc_price, std_err = monte_carlo_call(S0, K, T, r, sigma, num_paths=100000)
+
+# Display Comparison
+print(f"Analytical Black-Scholes Price : {bs_price:.4f}")
+print(f"Monte Carlo Simulated Price     : {mc_price:.4f} (Std Error: ±{std_err:.4f})")
+print(f"95% Confidence Interval         : [{mc_price - 1.96*std_err:.4f}, {mc_price + 1.96*std_err:.4f}]")
+```
+
+---
+
+## 14.4 Variance Reduction Techniques
+
+To accelerate Monte Carlo convergence and reduce sampling error without exponentially increasing path counts, advanced variance reduction methods can be applied:
+
+* **Antithetic Variates:** For each simulated random path generated using $Z \sim N(0,1)$, a complementary path using $-Z$ is generated simultaneously. Because $Z$ and $-Z$ are negatively correlated, the variance of the average payoff is significantly reduced.
+* **Control Variates:** Uses a correlated derivative with a known analytical solution (e.g., an underlying forward contract) to adjust and correct the simulated option payoff.
+* **Importance Sampling:** Shifts the simulation probability density toward regions where options end deep in-the-money, particularly useful for out-of-the-money or rare event options.
+
+---
+
+# 15. Monte Carlo Convergence
+
+Monte Carlo simulation contains sampling error because the expectation is estimated using a finite number of paths. The standard error decreases approximately as:
+
+$$\mathcal{O}\left( \frac{1}{\sqrt{N}} \right)$$
+
+where $N$ is the number of simulated paths. Therefore, increasing the number of simulations generally improves the accuracy of the estimate, although it also increases computational cost.
+
+---
+
+# 16. Black-Scholes vs. Monte Carlo
+
+| Feature | Black-Scholes | Monte Carlo |
+| :--- | :--- | :--- |
+| **Approach** | Analytical | Numerical |
+| **Main method** | PDE solution | Simulation |
+| **Output** | Closed-form price | Numerical estimate |
+| **Computational cost** | Low for standard European options | Higher |
+| **Flexibility** | Limited by model assumptions | Highly flexible |
+| **Complex payoffs** | More difficult | More adaptable |
+| **Random simulation** | No | Yes |
+| **Risk-neutral valuation** | Yes | Yes |
+
+The two approaches are based on the same risk-neutral pricing framework but provide different computational methods.
+
+---
+
+# 17. Why Monte Carlo is Useful
+
+Monte Carlo methods become particularly useful when a closed-form solution is difficult or unavailable. Applications include:
+- Path-dependent options
+- Barrier options
+- Asian options
+- Stochastic-volatility models
+- Jump-diffusion models
+- High-dimensional derivatives
+
+The main advantage is flexibility: complicated stochastic models and payoffs can often be handled by simulation.
+
+---
+
+# 18. Key Result
+
+For the numerical example ($S = 100, K = 100, T = 1, r = 0.05, \sigma = 0.20$), the Black-Scholes analytical solution gives:
+
+$$C \approx 10.45$$
+
+A Monte Carlo implementation using the same model should produce an estimate close to this analytical value when a sufficiently large number of simulations is used. Any difference is primarily due to Monte Carlo sampling error.
+
+---
+
+# 19. Conclusion
+
+This project demonstrates two complementary approaches to European option pricing.
+
+The Black-Scholes approach begins with the stochastic stock-price model $dS_t = \mu S_t \, dt + \sigma S_t \, dW_t$ and uses Itô's Lemma, hedging, and the no-arbitrage principle to obtain the Black-Scholes PDE:
+
+$$\frac{\partial V}{\partial t} + \frac{1}{2} \sigma^2 S^2 \frac{\partial^2 V}{\partial S^2} + r S \frac{\partial V}{\partial S} - r V = 0$$
+
+Through an appropriate change of variables, this PDE is transformed into the heat equation $\frac{\partial u}{\partial \tau} = \frac{\partial^2 u}{\partial x^2}$. The resulting solution leads to the classical Black-Scholes formula:
+
+$$C = S N(d_1) - K e^{-r(T-t)} N(d_2)$$
+
+The Monte Carlo approach instead uses the risk-neutral representation:
+
+$$C(S,t) = e^{-r(T-t)} \mathbb{E}^{\mathbb{Q}} \left[ \max(S_T - K, 0) \;\middle|\; S_t = S \right]$$
+
+The expectation is estimated by simulating many possible stock-price paths.
+
+The project therefore illustrates an important principle in quantitative finance:
+
+> **Analytical models provide mathematical insight and computational efficiency, while numerical methods provide flexibility when analytical solutions become difficult or unavailable.**
+
+The volatility smile further demonstrates that the assumptions of the standard Black-Scholes model do not completely capture real market behavior.
+
+---
+
+# 20. Project Report
+
+The complete mathematical derivation is available in the accompanying PDF:
+
+**[Mathematical Modeling of Option Pricing — Full Report](./Mathematical_Modeling_of_Option_Pricing.pdf)**
+
+The report covers:
+- European option pricing
+- Geometric Brownian Motion
+- Itô's Lemma
+- Black-Scholes PDE
+- Risk-free hedging
+- Heat-equation transformation
+- Method of undetermined coefficients
+- Laplace transforms
+- Black-Scholes formula
+- Numerical example
+- Implied volatility
+- Volatility smile
+- Feynman-Kac theorem
+- Monte Carlo simulation
+- Analytical vs. numerical pricing
+
+---
+
+# 21. Repository Structure
+
+```text
+Option-Pricing-Black-Scholes-Monte-Carlo/
+│
+├── README.md
+│
+└── Mathematical_Modeling_of_Option_Pricing.pdf
+```
+
+---
+
+# 22. References
+
+1. Black, F. and Scholes, M. (1973). *The Pricing of Options and Corporate Liabilities*. Journal of Political Economy, 81(3), 637–654.
+2. Shreve, S. E. (2004). *Stochastic Calculus for Finance II: Continuous-Time Models*. Springer.
+3. Heston, S. L. (1993). *A Closed-Form Solution for Options with Stochastic Volatility with Applications to Bond and Currency Options*. The Review of Financial Studies, 6(2), 327–343.
+
+---
+
+# Author
+
+**Rahul Kumar**  
+Indian Statistical Institute, Kolkata  
+**Interests:** Quantitative Finance · Mathematical Finance · Algorithmic Trading · Financial Modeling
