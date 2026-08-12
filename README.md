@@ -1,62 +1,72 @@
 # Mathematical Modeling of Option Pricing
 
-### Using the Black-Scholes PDE and Monte Carlo Simulation
+## Black-Scholes PDE and Monte Carlo Simulation
 
-This project studies **European option pricing** using two complementary approaches:
+This project develops a mathematical framework for pricing European options using the **Black-Scholes model** and **Monte Carlo simulation**.
 
-1. **Black-Scholes PDE** — an analytical approach based on stochastic calculus, partial differential equations, and the no-arbitrage principle.
-2. **Monte Carlo Simulation** — a numerical approach based on simulating a large number of possible future stock-price paths.
+The project connects:
 
-The project also studies the **volatility smile**, which highlights an important limitation of the constant-volatility assumption in the standard Black-Scholes model.
+- Stochastic differential equations
+- Itô's Lemma
+- No-arbitrage pricing
+- Partial differential equations
+- Heat-equation transformations
+- Laplace transforms
+- Risk-neutral valuation
+- Monte Carlo simulation
+- Implied volatility
+- Volatility smile
 
-The mathematical development connects concepts from **differential equations, stochastic processes, probability, and mathematical finance**.
+The complete mathematical derivation is provided in the accompanying PDF report.
 
 ---
 
-## 1. Introduction
+## 1. Project Overview
 
-### 1.1 What is an Option?
+The main objective is to understand how the price of a European option can be obtained from both an **analytical** and a **numerical** perspective.
 
-An option is a financial contract that gives the buyer the **right, but not the obligation**, to buy or sell an underlying asset at a predetermined price, called the **strike price** $K$, on or before a specified date.
+The project follows two approaches:
 
-For a European call option, the payoff at maturity is:
+### Analytical Approach
+
+Starting from the stochastic model for the stock price, the Black-Scholes PDE is derived using Itô's Lemma and a risk-free hedging argument.
+
+The PDE is then transformed into the classical heat equation, leading to the Black-Scholes closed-form solution.
+
+### Numerical Approach
+
+The Feynman-Kac representation expresses the option price as a discounted expected payoff.
+
+Monte Carlo simulation estimates this expectation by generating a large number of possible future stock-price paths.
+
+---
+
+# 2. European Call Option
+
+A European call option gives its holder the right, but not the obligation, to buy an underlying asset at the strike price $K$ at maturity $T$.
+
+The payoff at maturity is:
 
 $$
-\operatorname{Payoff}
-=
-\max(S_T-K,0)
+C_T=\max(S_T-K,0)
 $$
 
 where:
 
-- $S_T$ = stock price at maturity
-- $K$ = strike price
+- $S_T$ is the stock price at maturity.
+- $K$ is the strike price.
 
-For example, if $K=100$ and the stock price at expiry is $120, the payoff is:
+If $S_T>K$, the option finishes in the money.
 
-$$
-\max(120-100,0)=20
-$$
+If $S_T\leq K$, the payoff is zero.
 
-If the stock price is $80, the payoff is:
-
-$$
-\max(80-100,0)=0
-$$
-
-The central question is:
-
-> **What is the fair price of this option today?**
-
-This is the problem addressed by the Black-Scholes framework.
+The main problem is to determine the fair value of the option before maturity.
 
 ---
 
-## 2. The Black-Scholes PDE
+# 3. Modeling the Stock Price
 
-### 2.1 Modeling the Stock Price
-
-The stock price $S_t$ is modeled as a **Geometric Brownian Motion**:
+The stock price is modeled using Geometric Brownian Motion:
 
 $$
 dS_t
@@ -69,19 +79,23 @@ $$
 where:
 
 - $S_t$ = stock price at time $t$
-- $\mu$ = expected return or drift
+- $\mu$ = expected return
 - $\sigma$ = volatility
-- $W_t$ = Wiener process
+- $W_t$ = standard Wiener process
 
-This stochastic differential equation describes the continuous evolution of the stock price with both a deterministic and a random component.
+The first term represents the deterministic component of the price movement, while the second term represents the random component.
 
 ---
 
-### 2.2 From SDE to PDE
+# 4. Derivation of the Black-Scholes PDE
 
-Let $V(S,t)$ denote the value of the option.
+Let the option value be:
 
-Applying **Itô's Lemma** gives:
+$$
+V=V(S,t)
+$$
+
+Applying Itô's Lemma gives:
 
 $$
 dV
@@ -100,38 +114,30 @@ dV
 dW_t
 $$
 
-To eliminate the random component, construct the hedged portfolio:
+Construct a hedged portfolio:
 
 $$
 \Pi
 =
--V
-+
+V
+-
 \frac{\partial V}{\partial S}S
 $$
 
-The stochastic term cancels, giving:
+The stochastic term is eliminated by choosing the appropriate hedge.
 
-$$
-d\Pi
-=
-\left(
--\frac{\partial V}{\partial t}
--
-\frac{1}{2}\sigma^2S^2
-\frac{\partial^2V}{\partial S^2}
-\right)dt
-$$
+The resulting portfolio is locally risk-free.
 
-Since the portfolio is risk-free, the **no-arbitrage principle** requires:
+By the no-arbitrage principle, a risk-free portfolio must earn the risk-free rate $r$:
 
 $$
 d\Pi=r\Pi\,dt
 $$
 
-Substituting the portfolio value gives the **Black-Scholes PDE**:
+Substituting the portfolio and simplifying gives the **Black-Scholes PDE**:
 
 $$
+\boxed{
 \frac{\partial V}{\partial t}
 +
 \frac{1}{2}\sigma^2S^2
@@ -141,46 +147,49 @@ rS\frac{\partial V}{\partial S}
 -rV
 =
 0
+}
 $$
 
 For a European call option, the terminal condition is:
 
 $$
-V(S,T)
-=
-\max(S-K,0)
+\boxed{
+V(S,T)=\max(S-K,0)
+}
 $$
 
 ---
 
-# 3. Reduction to the Heat Equation
+# 5. Transformation to the Heat Equation
 
-The Black-Scholes PDE contains non-constant coefficients involving $S$ and $S^2$.
+The Black-Scholes PDE contains coefficients depending on the stock price $S$.
 
-A change of variables transforms the equation into a constant-coefficient equation.
+A change of variables transforms it into a simpler PDE.
 
-### Step 1: Change of Variables
+## Step 1 — Change of Variables
 
 Define:
 
 $$
-S=Ke^x
+x=\ln\left(\frac{S}{K}\right)
 $$
 
-and
+and:
 
 $$
-t
-=
-T-\frac{2\tau}{\sigma^2}
+\tau=\frac{\sigma^2}{2}(T-t)
 $$
 
-and write:
+Therefore:
 
 $$
-V(S,t)
-=
-Kv(x,\tau)
+t=T-\frac{2\tau}{\sigma^2}
+$$
+
+Now write the option value as:
+
+$$
+V(S,t)=K\,v(x,\tau)
 $$
 
 Define:
@@ -189,7 +198,7 @@ $$
 k=\frac{2r}{\sigma^2}
 $$
 
-After substitution, the Black-Scholes PDE becomes:
+After substituting these transformations into the Black-Scholes PDE, we obtain:
 
 $$
 \frac{\partial v}{\partial \tau}
@@ -200,11 +209,17 @@ $$
 -kv
 $$
 
+The terminal condition becomes the initial condition:
+
+$$
+v(x,0)=\max(e^x-1,0)
+$$
+
 ---
 
-### Step 2: Method of Undetermined Coefficients
+# 6. Method of Undetermined Coefficients
 
-Assume a solution of the form:
+To eliminate the first-order derivative and the term involving $v$, assume:
 
 $$
 v(x,\tau)
@@ -213,9 +228,7 @@ e^{\alpha x+\beta\tau}
 u(x,\tau)
 $$
 
-Substituting this into the transformed PDE and choosing $\alpha$ and $\beta$ appropriately eliminates the first-order derivative and zeroth-order terms.
-
-The required values are:
+Substituting this expression into the transformed PDE and choosing the constants appropriately gives:
 
 $$
 \alpha
@@ -223,7 +236,7 @@ $$
 -\frac{k-1}{2}
 $$
 
-and
+and:
 
 $$
 \beta
@@ -231,15 +244,17 @@ $$
 -\frac{(k+1)^2}{4}
 $$
 
-The equation then reduces to the standard **heat equation**:
+With these values, the transformed equation becomes the standard heat equation:
 
 $$
+\boxed{
 \frac{\partial u}{\partial \tau}
 =
 \frac{\partial^2u}{\partial x^2}
+}
 $$
 
-The corresponding initial condition is:
+The initial condition becomes:
 
 $$
 u(x,0)
@@ -253,67 +268,97 @@ e^{\frac{k-1}{2}x},
 \right)
 $$
 
-This transformation is the key step that connects the Black-Scholes PDE with classical differential-equation techniques.
+Thus, the Black-Scholes PDE has been reduced to a classical heat-equation problem.
 
 ---
 
-# 4. Solution Using the Laplace Transform
+# 7. Laplace Transform Approach
 
-Apply the Laplace transform with respect to $\tau$:
-
-$$
-\hat{u}(x,s)
-=
-\int_0^\infty
-e^{-s\tau}
-u(x,\tau)
-\,d\tau
-$$
-
-Since:
+The heat equation is:
 
 $$
-\frac{\partial u}{\partial\tau}
+\frac{\partial u}{\partial \tau}
 =
 \frac{\partial^2u}{\partial x^2}
 $$
 
-the transformed equation becomes:
+Take the Laplace transform with respect to $\tau$:
 
 $$
-\frac{d^2\hat{u}}{dx^2}
+\widehat{u}(x,s)
+=
+\int_0^\infty
+e^{-s\tau}
+u(x,\tau)\,d\tau
+$$
+
+Using the Laplace transform of the time derivative:
+
+$$
+\mathcal{L}
+\left[
+\frac{\partial u}{\partial\tau}
+\right]
+=
+s\widehat{u}(x,s)-u(x,0)
+$$
+
+Therefore:
+
+$$
+s\widehat{u}(x,s)-u(x,0)
+=
+\frac{d^2\widehat{u}}{dx^2}
+$$
+
+or:
+
+$$
+\boxed{
+\frac{d^2\widehat{u}}{dx^2}
 -
-s\hat{u}(x,s)
+s\widehat{u}(x,s)
 =
 -u(x,0)
+}
 $$
 
-This is a second-order linear ordinary differential equation with constant coefficients.
-
-The homogeneous solution is:
+The associated homogeneous equation is:
 
 $$
-\hat{u}_h(x,s)
+\frac{d^2\widehat{u}}{dx^2}
+-
+s\widehat{u}
 =
-A(s)e^{-\sqrt{s}\,x}
-+
-B(s)e^{\sqrt{s}\,x}
+0
 $$
 
-Applying the appropriate boundary conditions and taking the inverse Laplace transform leads to the classical **Black-Scholes formula**.
+with solution:
+
+$$
+\widehat{u}_h(x,s)
+=
+A(s)e^{\sqrt{s}x}
++
+B(s)e^{-\sqrt{s}x}
+$$
+
+Applying the relevant boundary conditions and inverting the Laplace transform leads to the classical Black-Scholes pricing formula.
 
 ---
 
-# 5. Black-Scholes Formula
+# 8. Black-Scholes Formula
 
 For a European call option, the Black-Scholes price is:
 
 $$
-V(S,t)
+\boxed{
+C
 =
 SN(d_1)
 -
 Ke^{-r(T-t)}N(d_2)
+}
 $$
 
 where:
@@ -337,12 +382,10 @@ and:
 $$
 d_2
 =
-d_1
--
-\sigma\sqrt{T-t}
+d_1-\sigma\sqrt{T-t}
 $$
 
-Here, $N(x)$ is the cumulative distribution function of the standard normal distribution:
+Here, $N(\cdot)$ denotes the cumulative distribution function of the standard normal distribution:
 
 $$
 N(x)
@@ -354,21 +397,19 @@ $$
 
 ---
 
-# 6. Worked Example
+# 9. Numerical Example
 
 Consider a European call option with:
 
 | Parameter | Value |
 |---|---:|
-| Current stock price $S$ | 100 |
+| Stock price $S$ | 100 |
 | Strike price $K$ | 100 |
-| Time to expiry $T-t$ | 1 year |
+| Time to maturity $T-t$ | 1 year |
 | Risk-free rate $r$ | 0.05 |
 | Volatility $\sigma$ | 0.20 |
 
----
-
-### Step 1: Calculate $d_1$
+## Step 1 — Calculate $d_1$
 
 $$
 d_1
@@ -396,17 +437,13 @@ $$
 d_1
 =
 \frac{0.05+0.02}{0.20}
-$$
-
-Therefore:
-
-$$
-d_1=0.35
+=
+0.35
 $$
 
 ---
 
-### Step 2: Calculate $d_2$
+## Step 2 — Calculate $d_2$
 
 $$
 d_2
@@ -426,118 +463,96 @@ $$
 
 ---
 
-### Step 3: Calculate the Normal CDF Values
+## Step 3 — Standard Normal Probabilities
 
-Using the standard normal distribution:
+Using the standard normal CDF:
 
 $$
-N(d_1)
-=
-N(0.35)
-\approx
-0.6368
+N(d_1)=N(0.35)\approx0.6368
 $$
 
 and:
 
 $$
-N(d_2)
-=
-N(0.15)
-\approx
-0.5596
+N(d_2)=N(0.15)\approx0.5596
 $$
 
 ---
 
-### Step 4: Calculate the Option Price
+## Step 4 — Calculate the Option Price
 
-Using the Black-Scholes formula:
+Using:
 
 $$
-V
+C
 =
 SN(d_1)
 -
 Ke^{-r(T-t)}N(d_2)
 $$
 
-Substituting the values:
+we obtain:
 
 $$
-V
+C
 =
 100(0.6368)
 -
 100e^{-0.05}(0.5596)
 $$
 
-Using:
-
-$$
-e^{-0.05}\approx0.9512
-$$
-
-we obtain approximately:
-
-$$
-V
-=
-63.68
--
-53.23
-$$
-
 Therefore:
 
 $$
-\boxed{V\approx10.45}
+\boxed{
+C\approx10.45
+}
 $$
 
-Thus, the theoretical Black-Scholes price of the European call option is approximately **10.45**.
+Thus, under the Black-Scholes assumptions, the theoretical European call price is approximately **10.45**.
 
 ---
 
-# 7. The Volatility Smile
+# 10. Implied Volatility
 
-## 7.1 Implied Volatility
+The Black-Scholes model treats volatility $\sigma$ as an input.
 
-The Black-Scholes formula takes volatility $\sigma$ as an input.
+In practice, we can instead observe a market option price and solve for the volatility that produces that price.
 
-We can also work in the opposite direction.
+This volatility is called **implied volatility**.
 
-Given an observed market option price $V_{\text{market}}$, we can solve for the volatility that makes the Black-Scholes formula equal to the market price.
-
-This volatility is called the **implied volatility**:
+It satisfies:
 
 $$
-V_{\text{BS}}
+C_{\text{BS}}
 \left(
 S,K,T,r,\sigma_{\text{imp}}
 \right)
 =
-V_{\text{market}}
+C_{\text{market}}
 $$
 
-If the Black-Scholes model were perfectly consistent with market prices, the implied volatility would be approximately constant across different strike prices.
+Thus, implied volatility is the value of $\sigma$ that makes the Black-Scholes price equal to the observed market price.
 
 ---
 
-## 7.2 What the Market Shows
+# 11. Volatility Smile
 
-In real markets, implied volatility varies with the strike price.
+If the Black-Scholes assumptions perfectly described the market, implied volatility would be approximately constant across strike prices.
 
-Plotting implied volatility against strike price often produces a pattern known as the **volatility smile** or **volatility skew**.
+In practice, implied volatility varies with the strike price.
+
+A plot of implied volatility against strike price can produce a pattern known as the **volatility smile** or **volatility skew**.
 
 Conceptually:
 
 ```text
 Implied
 Volatility
-   ^
-   |
-   |       \        /
-   |        \______/
-   |
-   +----------------------> Strike Price
-                ATM
+    ^
+    |
+    |        \      /
+    |         \____/
+    |
+    +----------------------> Strike Price
+                 ATM
